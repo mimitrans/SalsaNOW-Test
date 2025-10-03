@@ -305,10 +305,12 @@ namespace SalsaNOW
 
             Process.Start(startInfo);
 
-            foreach (var process in Process.GetProcessesByName("steamwebhelper"))
+            foreach (var process in Process.GetProcessesByName("steam"))
             {
                 process.Kill();
             }
+
+            Process.Start("steam://open/library");
         }
 
         public class SavePath
