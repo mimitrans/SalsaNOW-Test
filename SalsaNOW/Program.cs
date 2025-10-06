@@ -52,7 +52,7 @@ namespace SalsaNOW
             await Startup();
             await AppsInstall();
             await DesktopInstall();
-            await SteamServerShutdown();
+            await SteamUSG();
         }
 
         static async Task Startup()
@@ -274,9 +274,10 @@ namespace SalsaNOW
             }
         }
 
-        static async Task SteamServerShutdown()
+        static async Task SteamUSG()
         {
             string dummyJsonLink = "https://github.com/dpadGuy/SalsaNOWThings/raw/refs/heads/main/kaka.json";
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
             using (WebClient webClient = new WebClient())
             {
@@ -304,6 +305,9 @@ namespace SalsaNOW
             };
 
             Process.Start(startInfo);
+
+            Directory.Delete($"{localAppData}\\NVIDIA", true);
+            Directory.Delete($"{localAppData}\\NVIDIA Corporation", true);
 
             foreach (var process in Process.GetProcessesByName("steam"))
             {
