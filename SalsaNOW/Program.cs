@@ -306,8 +306,14 @@ namespace SalsaNOW
 
             Process.Start(startInfo);
 
-            Directory.Delete($"{localAppData}\\NVIDIA", true);
-            Directory.Delete($"{localAppData}\\NVIDIA Corporation", true);
+            try
+            {
+                Directory.Delete($"{localAppData}\\NVIDIA", true);
+                Directory.Delete($"{localAppData}\\NVIDIA Corporation", true);
+            }
+            catch
+            {
+            }
 
             foreach (var process in Process.GetProcessesByName("steam"))
             {
