@@ -57,7 +57,7 @@ namespace SalsaNOW
 
         static async Task Startup()
         {
-            string jsonUrl = "https://github.com/dpadGuy/SalsaNOWThings/raw/refs/heads/main/directory.json";
+            string jsonUrl = "https://github.com/mimitrans/SalsaNOWThings-Test/raw/refs/heads/main/directory.json";
 
             using (WebClient webClient = new WebClient())
             {
@@ -72,7 +72,7 @@ namespace SalsaNOW
         }
         static async Task AppsInstall()
         {
-            string jsonUrl = "https://github.com/dpadGuy/SalsaNOWThings/raw/refs/heads/main/apps.json";
+            string jsonUrl = "https://github.com/mimitrans/SalsaNOWThings-Test/raw/refs/heads/main/apps.json";
 
             using (WebClient webClient = new WebClient())
             {
@@ -277,51 +277,71 @@ namespace SalsaNOW
         static async Task SteamUSG()
         {
             string dummyJsonLink = "https://github.com/dpadGuy/SalsaNOWThings/raw/refs/heads/main/kaka.json";
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string globalDirectory = @"C:\temp\testdir"; // ensure this exists
+            Directory.CreateDirectory(globalDirectory);
 
             using (WebClient webClient = new WebClient())
             {
                 try
                 {
-                    Console.WriteLine("[+] Shutting Down Steam Server");
-                    string response = webClient.UploadString("http://127.10.0.231:9753/shutdown", "POST");
-                    Console.WriteLine(response);
+                    // politely try to stop any local helper server (best-effort)
+                    webClient.UploadString("http://127.10.0.231:9753/shutdown", "POST");
                 }
-                catch
-                {
-                    Console.WriteLine("[!] Steam Server is not running.");
-                }
+                catch { /* ignore if not running */ }
 
-                await webClient.DownloadFileTaskAsync(new Uri(dummyJsonLink), $"{globalDirectory}\\kaka.json");
+                // download kaka.json and await completion
+                string targetJson = Path.Combine(globalDirectory, "kaka.json");
+                await webClient.DownloadFileTaskAsync(new Uri(dummyJsonLink), targetJson);
+                Console.WriteLine("[+] Download complete: " + targetJson);
             }
 
-            var startInfo = new ProcessStartInfo
+            // START the server.exe with the downloaded json
+            var serverStart = new ProcessStartInfo
             {
                 FileName = @"C:\Program Files (x86)\Steam\lockdown\server\server.exe",
-                Arguments = $"{globalDirectory}\\kaka.json",
+                Arguments = $"\"{Path.Combine(globalDirectory, "kaka.json")}\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
 
-            Process.Start(startInfo);
+            var serverProc = Process.Start(serverStart);
+            Console.WriteLine("[+] Started server.exe, pid=" + (serverProc?.Id ?? -1));
 
-            try
+            // Wait a bit for server to initialize (adjust as needed)
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            // SAFE: Instead of touching NVIDIA folders, use a mock Steam exe for testing only
+            string mockSteam = @"I:\Apps\OldSClient\steam.exe";
+            if (!File.Exists(mockSteam))
             {
-                Directory.Delete($"{localAppData}\\NVIDIA", true);
-                Directory.Delete($"{localAppData}\\NVIDIA Corporation", true);
-            }
-            catch
-            {
+                Console.WriteLine("[!] Mock Steam exe not found at: " + mockSteam);
+                Console.WriteLine("Create a simple mock exe that logs and sleeps and re-run in a VM.");
+                return;
             }
 
-            foreach (var process in Process.GetProcessesByName("steam"))
+            // Kill any real steam processes only if you're in an isolated test VM and you're sure
+            foreach (var p in Process.GetProcessesByName("steam"))
             {
-                process.Kill();
+                try { p.Kill(); }
+                catch { /* ignore in test */ }
             }
 
+            // Start the mock steam (or real steam in a legal/expected flow)
+            var mockStart = new ProcessStartInfo
+            {
+                FileName = mockSteam,
+                CreateNoWindow = false,
+                UseShellExecute = false
+            };
+            var mockProc = Process.Start(mockStart);
+            Console.WriteLine("[+] Started mock steam, pid=" + (mockProc?.Id ?? -1));
+
+            // Optionally: wait until mock steam is running, then open library
+            await Task.Delay(1000);
             Process.Start("steam://open/library");
         }
+
 
         public class SavePath
         {
